@@ -2,9 +2,9 @@
 --SET VARIABLES
 DROP TABLE IF EXISTS myvar;
 SELECT 
-	'2018-01-01'::date AS startdatum 
-	,'2018-12-31'::date AS einddatum
-	,3::numeric AS magazine --3 = focus; 4 = oriolus; 204 = zoogdier;
+	'2019-01-01'::date AS startdatum 
+	,'2019-12-31'::date AS einddatum
+	,4::numeric AS magazine --3 = focus; 4 = oriolus; 204 = zoogdier;
 INTO TEMP TABLE myvar;
 SELECT * FROM myvar;
 ------------------------------------------------
@@ -21,6 +21,7 @@ SELECT	DISTINCT--COUNT(p.id) _aantal, now()::date vandaag
 	CASE 	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.name ELSE p.city 								END NAW3,*/
 	CASE	WHEN c.id = 21 AND p.crab_used = 'true' THEN COALESCE(ccs.name,'')	ELSE COALESCE(p.street,'')				END straat,
 	p.street_nbr huisnummer,
+	p.street2 huisnaam,
 	p.street_bus bus,
 	CASE	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.zip			ELSE p.zip						END postcode,
 	CASE 	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.name ELSE p.city 								END woonplaats,
@@ -29,6 +30,7 @@ SELECT	DISTINCT--COUNT(p.id) _aantal, now()::date vandaag
 	
 	COALESCE(p.email,p.email_work) email,
 	p.membership_state status,
+	COALESCE(p.create_date::date,membership_start) aanmaakdatum,
 	p.membership_start Lidmaatschap_startdatum, 
 	p.membership_stop Lidmaatschap_einddatum, 
 	p.active,
@@ -64,3 +66,4 @@ FROM 	res_partner p
 		WHERE product_id = v.magazine
 			AND mm.date_to >= v.einddatum
 			AND COALESCE(date_cancel,'2099-01-01') > now()::date) mm ON mm.partner_id = p.id
+--WHERE p.id = 278207	
