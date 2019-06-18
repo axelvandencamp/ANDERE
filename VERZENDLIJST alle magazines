@@ -21,8 +21,8 @@ SELECT	DISTINCT--COUNT(p.id) _aantal, now()::date vandaag
 	CASE 	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.name ELSE p.city 								END NAW3,*/
 	CASE	WHEN c.id = 21 AND p.crab_used = 'true' THEN COALESCE(ccs.name,'')	ELSE COALESCE(p.street,'')				END straat,
 	p.street_nbr huisnummer,
-	p.street2 huisnaam,
 	p.street_bus bus,
+	p.street2 huisnaam,
 	CASE	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.zip			ELSE p.zip						END postcode,
 	CASE 	WHEN c.id = 21 AND p.crab_used = 'true' THEN cc.name ELSE p.city 								END woonplaats,
 	--p.postbus_nbr postbus,
