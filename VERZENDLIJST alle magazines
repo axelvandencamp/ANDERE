@@ -33,6 +33,8 @@ SELECT	DISTINCT--COUNT(p.id) _aantal, now()::date vandaag
 	COALESCE(p.create_date::date,membership_start) aanmaakdatum,
 	p.membership_start Lidmaatschap_startdatum, 
 	p.membership_stop Lidmaatschap_einddatum, 
+	mm1.name tijdschrift_1,
+	mm1.name tijdschrift_1,
 	p.active,
 	p.address_state_id address_state, --waarde 2 is een fout adres
 	p.deceased overleden
@@ -48,6 +50,9 @@ FROM 	res_partner p
 	JOIN res_country c ON p.country_id = c.id
 	LEFT OUTER JOIN res_country_city_street ccs ON p.street_id = ccs.id
 	LEFT OUTER JOIN res_country_city cc ON p.zip_id = cc.id
+	--tijdschriften
+	LEFT OUTER JOIN mailing_mailing mm1 ON mm1.id = p.periodical_1_id
+	LEFT OUTER JOIN mailing_mailing mm2 ON mm2.id = p.periodical_2_id
 	--herkomst lidmaatschap
 	--LEFT OUTER JOIN res_partner_membership_origin mo ON p.membership_origin_id = mo.id
 	--afdeling vs afdeling eigen keuze
