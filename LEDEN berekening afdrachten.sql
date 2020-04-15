@@ -49,12 +49,14 @@
 --!!!BIJ BEREKING IN DECEMBER EXTRA CHECKEN OP CORRECTHEID!!!
 --v4.4	22/05/2019	aanpassing gemaakt in berekening afdrachten Koepels (Regionales): voor "np waasland vzw" en "np schijnvallei vzw" afdracht op €0.7 gezet
 --			sectie toegevoegd (onderaan in comment) ter controle van de detail-gegevens
+-- -----
+--Vanaf nu enkel nog versie controle in Github
 ------------------------------------------------------------------
 --CREATE TEMP VARs
 DROP TABLE IF EXISTS myvar;
 --ENKEL DE PERIODE AANPASSEN
 -- -indien ook gebruikt voor 2015 eerst terug testen!!!!
-SELECT 'APR'::text AS periode, '2019-01-01'::date AS startjaar, '2019-12-31'::date AS eindejaar, 
+SELECT 'DEC'::text AS periode, '2019-01-01'::date AS startjaar, '2019-12-31'::date AS eindejaar, 
 	'1999-01-01'::date AS startdatum_hern, '1999-01-01'::date AS einddatum_hern, '1999-01-01'::date AS startminhalfjaar, 
 	'1999-01-01'::date AS startdatum_n, '1999-01-01'::date AS einddatum_n, '1999-01-01'::date AS cutoff_hern_sept
 INTO TEMP TABLE myvar;
@@ -90,7 +92,7 @@ DROP TABLE IF EXISTS tempBerekenAfdrachtHern;
 CREATE TEMP TABLE tempBerekenAfdrachtHern (id numeric);
 -------------------------------------
 DROP TABLE IF EXISTS tempBerekenAfdracht;
-CREATE TEMP TABLE tempBerekenAfdracht (id numeric, afdeling_id numeric, afdeling text, afdracht numeric(3,1), id_nieuw text, afdeling_aangebracht text, aanbreng_premie numeric(3,1), koepel_id numeric, koepel text, afdracht_koepel numeric(3,1), postcode text, aanmaakdatum date, start_datum date, betaaldatum date, "type" text, actief text);
+CREATE TEMP TABLE tempBerekenAfdracht (id numeric, afdeling_id numeric, afdeling text, afdracht numeric(3,1), id_nieuw text, afdeling_aangebracht_id numeric, afdeling_aangebracht text, aanbreng_premie numeric(3,1), koepel_id numeric, koepel text, afdracht_koepel numeric(3,1), postcode text, aanmaakdatum date, start_datum date, betaaldatum date, "type" text, actief text);
 -------------------------------------
 --berekening nieuwe leden in een jaar
 -------------------------------------
@@ -151,19 +153,13 @@ INSERT INTO tempBerekenAfdracht (
 		--p.membership_start, p.membership_end, -- enkel nodig voor testen; bij gewone berekening afdrachten in commentaar zetten
 		COALESCE(COALESCE(a2.id,a.id),0) afdeling_id,
 		COALESCE(COALESCE(a2.name,a.name),'onbekend') afdeling,	
-		CASE
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt De Torenvalk vzw' THEN 6
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Antwerpen Noord vzw' THEN 3.7
-			--WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Schijnvallei vzw' THEN 3.7
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Wase Linkerscheldeoever vzw' THEN 3.7
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Gent vzw' THEN 5
-			ELSE 3
-		END afdracht,
+		0 afdracht,
 		p.id id_nieuw,
 		--COALESCE(COALESCE(a4.name,a.name),'onbekend') afdeling_aangebracht, 3 aanbreng_premie,
-		COALESCE(a4.name,'onbekend') afdeling_aangebracht, 20 aanbreng_premie,
+		COALESCE(a4.id,0) afdeling_aangebracht_id,
+		COALESCE(a4.name,'onbekend') afdeling_aangebracht, 0 aanbreng_premie,
 		--afdeling aangebracht is voor hernieuwingen niet van belang, we zetten ze gelijk aan de afdeling en de aanbreng premie gelijk aan 0 (dat vergemakkelijkt het werken in excel straks)
-		null::numeric koepel_id, '' koepel, 0 afdracht_koepel,
+		COALESCE(a5.id,0) koepel_id, COALESCE(a5.name,'onbekend') koepel, 0 afdracht_koepel,
 		p.zip postcode,
 		--COALESCE(aml2.last_rec_date,ml.date_from) rec_date,
 		p.create_date::date aanmaakdatum,
@@ -178,6 +174,8 @@ INSERT INTO tempBerekenAfdracht (
 		LEFT OUTER JOIN res_partner a2 ON p.department_choice_id = a2.id
 		--link naar wervende organisatie
 		LEFT OUTER JOIN res_partner a4 ON p.recruiting_organisation_id = a4.id
+		--link naar regionale
+		LEFT OUTER JOIN res_partner a5 ON p.partner_up_id = a5.id AND p.organisation_type_id = 1
 	);
 
 INSERT INTO tempBerekenAfdracht (
@@ -185,17 +183,11 @@ INSERT INTO tempBerekenAfdracht (
 		p.id, 
 		COALESCE(COALESCE(a2.id,a.id),0) afdeling_id,
 		COALESCE(COALESCE(a2.name,a.name),'onbekend') afdeling,	
-		CASE
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt De Torenvalk vzw' THEN 6
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Antwerpen Noord vzw' THEN 3.7
-			--WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Schijnvallei vzw' THEN 3.7
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Wase Linkerscheldeoever vzw' THEN 3.7
-			WHEN COALESCE(COALESCE(a2.name,a.name),'onbekend') = 'Natuurpunt Gent vzw' THEN 5
-			ELSE 3
-		END afdracht,
+		0 afdracht,
 		NULL id_nieuw,
+		COALESCE(a4.id,0) afdeling_aangebracht_id,
 		COALESCE(a4.name,'onbekend') afdeling_aangebracht, 0 aanbreng_premie,
-		null::numeric koepel_id, '' koepel, 0 afdracht_koepel,
+		COALESCE(a5.id,0) koepel_id, COALESCE(a5.name,'onbekend') koepel, 0 afdracht_koepel,
 		p.zip postcode,
 		p.create_date::date aanmaakdatum,
 		p.membership_start start_datum, 
@@ -209,13 +201,39 @@ INSERT INTO tempBerekenAfdracht (
 		LEFT OUTER JOIN res_partner a ON p.department_id = a.id
 		LEFT OUTER JOIN res_partner a2 ON p.department_choice_id = a2.id
 		--link naar wervende organisatie
-		LEFT OUTER JOIN res_partner a4 ON p.recruiting_organisation_id = a4.id		
+		LEFT OUTER JOIN res_partner a4 ON p.recruiting_organisation_id = a4.id
+		--link naar regionale
+		LEFT OUTER JOIN res_partner a5 ON p.partner_up_id = a5.id AND p.organisation_type_id = 1
 	WHERE tbah.id <> COALESCE(tban.id,0) AND p.membership_start < startjaar - '6 month'::interval --AND p.id = 282008
 	);
-
 ---------------
 --SELECT * FROM tempBerekenAfdracht WHERE id = 286745;
----------------
+---------------------------------------------------
+-- - afdracht + aanbrengpremie afdelingen toevoegen
+---------------------------------------------------
+UPDATE tempBerekenAfdracht
+SET afdracht = SQ1.remittance_exist_member
+FROM (SELECT p.id, p.remittance_exist_member FROM res_partner p) SQ1
+WHERE SQ1.id = tempBerekenAfdracht.afdeling_id;
+--
+UPDATE tempBerekenAfdracht
+SET aanbreng_premie = COALESCE(SQ1.remittance_new_member,0)
+FROM (SELECT p.id, p.remittance_new_member FROM res_partner p) SQ1
+WHERE SQ1.id = tempBerekenAfdracht.afdeling_aangebracht_id;
+------------------------------------------------------
+-- - regionale + afdracht regionale (koepel) toevoegen
+------------------------------------------------------
+UPDATE tempBerekenAfdracht
+SET koepel_id = COALESCE(SQ1.partner_up_id,0) , koepel = COALESCE(SQ1.a5_name,'')
+FROM (SELECT p.id, p.name, p.partner_up_id, a5.name a5_name FROM res_partner p LEFT OUTER JOIN res_partner a5 ON p.partner_up_id = a5.id) SQ1
+WHERE SQ1.id = tempBerekenAfdracht.afdeling_id;
+--SELECT p.id, p.name, p.partner_up_id, a5.name FROM res_partner p LEFT OUTER JOIN res_partner a5 ON p.partner_up_id = a5.id 
+--WHERE p.id = 292997 
+--
+UPDATE tempBerekenAfdracht
+SET afdracht_koepel = COALESCE(SQ1.remittance_exist_member,0)
+FROM (SELECT p.id, p.remittance_exist_member FROM res_partner p) SQ1
+WHERE SQ1.id = tempBerekenAfdracht.koepel_id;
 /*
 -------------------------------------------
 --KOEPELS + afdracht toevoegen aan gegevens
@@ -265,7 +283,7 @@ SELECT * FROM tempBerekenAfdracht --WHERE NOT(type = 'nieuw' AND afdeling_aangeb
 ------------------------------------------
 --===BEREKENING: TOTALEN PER AFDELING===--
 DROP TABLE IF EXISTS tempBerekenAfdracht_totalen;
-CREATE TEMP TABLE tempBerekenAfdracht_totalen ("sort" numeric, afdeling_id numeric, "afdeling/koepel" text, "aantal leden" numeric, afdracht numeric(7,1), "leden aangebracht" numeric, "aanbreng premie" numeric(7,1), totaal numeric(7,1));
+CREATE TEMP TABLE tempBerekenAfdracht_totalen ("sort" numeric, afdeling_id numeric, "afdeling/koepel" text, "aantal leden" numeric, afdracht numeric(7,1), "leden aangebracht" numeric, "aanbreng premie" numeric(7,1), totaal numeric(8,1));
 SELECT * FROM tempBerekenAfdracht_totalen;
 -----afdelingen
 INSERT INTO tempBerekenAfdracht_totalen
@@ -286,11 +304,11 @@ UPDATE tempBerekenAfdracht_totalen
 -----aanbrengpremies
 UPDATE tempBerekenAfdracht_totalen
 	SET "leden aangebracht" = aantal_leden, "aanbreng premie" = aanbreng_premie
-	FROM (SELECT afdeling_aangebracht, COUNT(id_nieuw) aantal_leden, SUM(aanbreng_premie) aanbreng_premie FROM tempBerekenAfdracht /*WHERE afdeling_aangebracht LIKE '%Gulke%'*//*WHERE id = 205296*/ GROUP BY afdeling_aangebracht) x
+	FROM (SELECT afdeling_aangebracht, COUNT(id_nieuw) aantal_leden, COUNT(id_nieuw)*aanbreng_premie aanbreng_premie FROM tempBerekenAfdracht /*WHERE afdeling_aangebracht LIKE '%Gulke%'*//*WHERE id = 205296*/ GROUP BY afdeling_aangebracht, aanbreng_premie) x
 	WHERE tempBerekenAfdracht_totalen."afdeling/koepel" = x.afdeling_aangebracht /*AND "sort" = 1*/;
 -----totalen rij niveau (afdracht + aanbreng premie per afdeling)
 UPDATE tempBerekenAfdracht_totalen
-	SET totaal = tot
+	SET totaal = COALESCE(tot,0)
 	FROM (SELECT "afdeling/koepel", (afdracht + "aanbreng premie") tot FROM tempBerekenAfdracht_totalen WHERE "afdeling/koepel" <> 'onbekend' AND "afdeling/koepel" <> 'geen koepel') x
 	WHERE tempBerekenAfdracht_totalen."afdeling/koepel" = x."afdeling/koepel";
 -----totalen op kolom niveau
